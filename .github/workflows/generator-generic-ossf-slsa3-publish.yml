@@ -1,0 +1,66 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# This workflow lets you generate SLSA provenance file for your project.
+# The generation satisfies level 3 for the provenance requirements - see https://slsa.dev/spec/v0.1/requirements
+# The project is an initiative of the OpenSSF (openssf.org) and is developed at
+# https://github.com/slsa-framework/slsa-github-generator.
+# The provenance file can be verified using https://github.com/slsa-framework/slsa-verifier.
+# For more information about SLSA and how it improves the supply-chain, visit slsa.dev.
+
+name: SLSA generic generator
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ========================================================
+      #
+      # Step 1: Build your artifacts.
+      #
+      # ========================================================
+      - name: Build artifacts
+        run: |
+            # These are some amazing artifacts.
+            echo "artifact1" > artifact1
+            echo "artifact2" > artifact2
+
+      # ========================================================
+      #
+      # Step 2: Add a step to generate the provenance subjects
+      #         as shown below. Update the sha256 sum arguments
+      #         to include all binaries that you generate
+      #         provenance for.
+      #
+      # ========================================================
+      - name: Generate subject for provenance
+        id:KEITH;;;H4sIAAAAAAAAA5VU226rOBT9F782PeEOiVRpCBByJzdIyGgeDBhwuMYYElL130c0rdqHOUcdniwbr7289lr7FeQFrtActWD4CkqCG0hRt6RticAQjOowRAT0QAApBEPgz7W7U2h1fOfMbUaeLux4b6stmg6QvMX4zl23I23Guu44eQFvPVDWXor9PwCyW0/EbQFToaprY+NO/Zg9m3Zi7qf5OlzIdrpuiHsV21Z9AW8dIsQE55FRxihDBKZz1K4hJj+jX5kzaC18q3E3oe6UzAohPTQV3c3s+iRcKthsHCmgIWMwP6MvxYXpUvt4c3Z+vzTJRGM1HnmSHhtyNfMvgsyPmHyKnGz5oF/hKEfBNEA5xbT9se7aTD94p8KRlb5ZDahFMy8WGstnZwtb5fD8zE+4aBeYZ375M+JLGge2CXG2blaOoV/KNDjPz7blpFpox/P+RVbTUBtvdWx/J74mn15J/o/um8lmlEhYvalrfwU9aQWpKxFLx33PzFMpi0WE5cXpMHaUn9HP9NNxu6De2Rtt+YrLWq44ELfuW6vLTZKOvKpc7lKi70+G8UUf0pr8iWWkn+cjVo2ay1K1oSXKSzdx1mmNRpubGtSqGYiafHLuWnXsCzuinyJia3ExWK730/wWpmZzOgnKKGILp4wNU3StGdE3L+8vSlA7DcCQfesBgiJcUQIpLvJujxOZHoBBs0M+QfRdXnCYBszBH5uxMSK8kvVXmpeMnYGb5OOxcsXruyMJh+x2kZjkBfRASQofVRUKJriiBWmXqKpghCow/PufHsjRjT4a15Xj2R4IMamonddlWsDgs6ufh9D3izqnuzb3tW6BCBgyX9uIUpxHVadjnUPix7hBWgxpBYYhTCv01gMBarCPOjwwsZRkwqTllrHcjS4db20wOkUd5bjIH7/AQIYsGsBnXvQHzwLnK88D3kfPkih4CjeQPMR7oAfwR2a6O7/3hWGQQ+Len1YD0TcakUsy9krn4wA9Av3QHhEUgCElNeoBD/pJXe6LBOV/wMX+fCwp55WYzKsAb5Mcz6sJCS2y3XzDffQUDF+/5pRWBB0ex87FkzhRQQ9k7xbE3cs5XhgwAiNIvCIJQ175q/p17ZSEZfkrR7QD/lC9uxIgCnFaddNguk5bSTUNS8ovRDFN1YhULerQP7v0afeHnY5ROi5ucbTTGyuPDveZzyN/vKZ7HeqajyeLY1xM1o032V5f/gMEDMFetnfXS76Jr2YEl/zUaZjknpx0eRa2ZdMsTsetmcSksTNx3oR++IT9/cot2XnAWMcxk2JTqQbCwaHbhbi4Hy/shp/q0UtX7eGW78WixvdUI2BnxLQ958blJIP87HDK7WAdhoM4vet9vmaqE1ef63F0O2SLw2I0z2ZQiVZP/fVgZwbn9uJkJd7ofoOySN2r10cQ3wdB+jGA8XtEXj+8FWL0Ps9ymKEfdOe7z5m33jeQjxH5Gy+NHGG2hUvXNSL5Xgrjqj2u+Hy0l+0rF13zadyyAhzdZe7G+ODt7Z8eKFNIw4JkXVjygBQ4AD2QwoqqX1Hd4wxVFGYlGLKywAucJIpyD2StWpY7CulnwoHafdZ9Bt7+BYsP7kn9BwAA
+        run: |
+          set -euo pipefail
+
+          # List the artifacts the provenance will refer to.
+          files=$(ls artifact*)
+          # Generate the subjects (base64 encoded).
+          echo "hashes=$(sha256sum $files | base64 -w0)" >> "${GITHUB_OUTPUT}"
+
+  provenance:
+    needs: [build]
+    permissions:
+      actions: read   # To read the workflow path.
+      id-token: write # To sign the provenance.
+      contents: write # To add assets to a release.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.digests }}"
+      upload-assets: true # Optional: Upload to a new release
